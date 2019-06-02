@@ -24,15 +24,21 @@ function scanFiles()
     $images_directory = "photos";
     $thumbs_directory = "thumbs";
     
-    $listdir = filter_input(INPUT_GET, 'dir', FILTER_SANITIZE_SPECIAL_CHARS);
+    $listdir = urldecode(filter_input(INPUT_GET, 'dir', FILTER_SANITIZE_SPECIAL_CHARS));
     $dirdata = [];
     $filedata = [];
+
+    // strip multiple slashes/dots to single one
+    $listdir = trim($listdir, '/');
+    $listdir = str_replace('\\', '/', $listdir);
+    $listdir = preg_replace('|\.{2,}|', '.', $listdir);
+    $listdir = str_replace('./', '', $listdir);
 
     foreach(new DirectoryIterator($images_directory."/".$listdir) as $fileinfo)
     {
         if($fileinfo->isDir() && !$fileinfo->isDot())
         {
-            $dirdata[] = '<a class="" href="img/1.jpg">'.
+            $dirdata[] = '<a class="" href="?dir='.urlencode(ltrim($listdir.'/'.$fileinfo->getFilename(), '/')).'">'.
                          '<img class="img-responsive" src="img/folder.png">'.
                          '</a>';
         }
@@ -44,7 +50,7 @@ function scanFiles()
             if(in_array(strtolower($type), ['jpg','png','gif','webp']))
             {
                 $filedata[] = '<a class="" href="'.$fileinfo->getPathname().'">'.
-                              '<img class="img-responsive" src="'.$thumbs_directory."/".sha1($fileinfo->getPathname()).'.png">'.
+                              '<img class="img-responsive" src="'.$thumbs_directory.'/'.sha1($fileinfo->getPathname()).'.png">'.
                               '<div class="simplegallery-gallery-poster">'.
                               '    <img src="img/zoom.png">'.
                               '</div>'.
@@ -55,6 +61,9 @@ function scanFiles()
 
     return [$dirdata, $filedata];
 }
+
+$data = scanFiles(); // 0 = directories
+                     // 1 = files
 ?>
 
 <!DOCTYPE html>
@@ -77,12 +86,14 @@ function scanFiles()
                     <span class="border"></span>
                 </h2>
                 <div class="simplegallery-gallery mrb50">
+                    <div id="folders" class="list-unstyled">
+                        <?php
+                            array_map(function($a){ print ($a); }, $data[0]);
+                        ?>
+                    </div>
                     <div id="thumbnails-without-animation" class="list-unstyled">
                         <?php
-                            $data = scanFiles(); // 0 = directories
-                                                 // 1 = files
-
-                            array_map('printf', $data[1]);
+                            array_map(function($a){ print ($a); }, $data[1]);
                         ?>
                     </div>
                 </div>
@@ -103,11 +114,14 @@ function scanFiles()
                 window.prettyPrint && prettyPrint()
 
                 //thumbnails without animation
+                var $folder = $('#folders');
                 var $thumb = $('#thumbnails-without-animation');
 
-                $thumb.on('onBeforeOpen.lg',function(event){
-                    alert('onBeforeOpen');
-                });
+                if ($folder.length) {
+                    $folder.justifiedGallery({
+                        border: 6
+                    });
+                }
 
                 if ($thumb.length) {
                     $thumb.justifiedGallery({
