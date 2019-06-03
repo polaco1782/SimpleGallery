@@ -34,6 +34,15 @@ function scanFiles()
     $listdir = preg_replace('|\.{2,}|', '.', $listdir);
     $listdir = str_replace('./', '', $listdir);
 
+    // add parent folder button
+    if($listdir)
+    {
+        $last = rtrim(str_replace(basename($listdir), '', $listdir), '/');
+        $dirdata[] = '<a class="" href="?dir='.urlencode(ltrim($last, '/')).'">'.
+                    '<img class="img-responsive" src="img/folder.png">'.
+                    '</a>';
+    }
+
     foreach(new DirectoryIterator($images_directory."/".$listdir) as $fileinfo)
     {
         if($fileinfo->isDir() && !$fileinfo->isDot())
